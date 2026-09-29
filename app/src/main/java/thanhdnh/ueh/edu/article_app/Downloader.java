@@ -3,6 +3,7 @@ package thanhdnh.ueh.edu.article_app;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 
@@ -25,6 +26,12 @@ import okio.Okio;
 public class Downloader {
   public static String cached_file_path = "";
 
+  public interface DownloadListener {
+    void onProgress(int progress);
+    void onSuccess(File file);
+    void onError(Exception e);
+  }
+
   public static File downloadFile(String url, File cached) {
     OkHttpClient client = new OkHttpClient();
     Request request = new Request.Builder().url(url).build();
@@ -45,22 +52,103 @@ public class Downloader {
     }
     return null;
   }
-  public static void downloadWithProgress(String inputurl, Handler mainHandler, Context context, File where2store, ProgressBar progressBar, ImageView imageView) {
+
+  public static void downloadWithProgress(String inputUrl, Handler mainHandler, File cachedDir, ProgressBar progressBar, DownloadListener listener) {
     OkHttpClient client = new OkHttpClient();
-    Request request = new Request.Builder().url(inputurl).build();
+    Request request = new Request.Builder().url(inputUrl).build();
+
+    if (progressBar != null) {
+      mainHandler.post(() -> {
+        progressBar.setVisibility(View.VISIBLE);
+        progressBar.setProgress(0);
+      });
+    }
 
     client.newCall(request).enqueue(new Callback() {
       @Override
       public void onFailure(Call call, IOException e) {
         mainHandler.post(() -> {
-          progressBar.setVisibility(ProgressBar.INVISIBLE);
+          if (progressBar != null) progressBar.setVisibility(View.GONE);
+          if (listener != null) listener.onError(e);
         });
       }
 
       @Override
       public void onResponse(Call call, Response response) {
         if (!response.isSuccessful()) {
-          mainHandler.post(() -> {});
+          mainHandler.post(() -> {
+            if (progressBar != null) progressBar.setVisibility(View.GONE);
+            if (listener != null) listener.onError(new IOException("HTTP error code: " + response.code()));
+          });
+          return;
+        }
+
+        try {
+          long totalBytes = response.body() != null ? response.body().contentLength() : -1;
+          InputStream inputStream = response.body().byteStream();
+          String contentType = response.header("Content-Type", "");
+          String extension = getExtensionFromMimeType(contentType);
+
+          File file = File.createTempFile("download_progress_", extension, cachedDir);
+
+          try (OutputStream outputStream = new FileOutputStream(file)) {
+            byte[] buffer = new byte[1024];
+            long downloadedBytes = 0;
+            int bytesRead;
+
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+              outputStream.write(buffer, 0, bytesRead);
+              downloadedBytes += bytesRead;
+              if (totalBytes > 0) {
+                int progress = (int) ((downloadedBytes * 100) / totalBytes);
+                mainHandler.post(() -> {
+                  if (progressBar != null) progressBar.setProgress(progress);
+                  if (listener != null) listener.onProgress(progress);
+                });
+              }
+            }
+            outputStream.flush();
+          }
+
+          mainHandler.post(() -> {
+            if (progressBar != null) progressBar.setVisibility(View.GONE);
+            if (listener != null) listener.onSuccess(file);
+          });
+        } catch (Exception e) {
+          mainHandler.post(() -> {
+            if (progressBar != null) progressBar.setVisibility(View.GONE);
+            if (listener != null) listener.onError(e);
+          });
+        }
+      }
+    });
+  }
+
+  public static void downloadWithProgress(String inputurl, Handler mainHandler, Context context, File where2store, ProgressBar progressBar, ImageView imageView) {
+    OkHttpClient client = new OkHttpClient();
+    Request request = new Request.Builder().url(inputurl).build();
+
+    if (progressBar != null) {
+      mainHandler.post(() -> {
+        progressBar.setVisibility(View.VISIBLE);
+        progressBar.setProgress(0);
+      });
+    }
+
+    client.newCall(request).enqueue(new Callback() {
+      @Override
+      public void onFailure(Call call, IOException e) {
+        mainHandler.post(() -> {
+          if (progressBar != null) progressBar.setVisibility(View.GONE);
+        });
+      }
+
+      @Override
+      public void onResponse(Call call, Response response) {
+        if (!response.isSuccessful()) {
+          mainHandler.post(() -> {
+            if (progressBar != null) progressBar.setVisibility(View.GONE);
+          });
           return;
         }
 
@@ -77,18 +165,24 @@ public class Downloader {
           while ((bytesRead = inputStream.read(buffer)) != -1) {
             outputStream.write(buffer, 0, bytesRead);
             downloadedBytes += bytesRead;
-            int progress = (int) ((downloadedBytes * 100) / totalBytes);
-            mainHandler.post(() -> progressBar.setProgress(progress));
+            if (totalBytes > 0) {
+              int progress = (int) ((downloadedBytes * 100) / totalBytes);
+              mainHandler.post(() -> {
+                if (progressBar != null) progressBar.setProgress(progress);
+              });
+            }
           }
           outputStream.flush();
 
           mainHandler.post(() -> {
             cached_file_path = where2store + "/downloaded_file" + extension;
-            imageView.setImageURI(Uri.parse(cached_file_path));
-            progressBar.setVisibility(ProgressBar.INVISIBLE);
+            if (imageView != null) imageView.setImageURI(Uri.parse(cached_file_path));
+            if (progressBar != null) progressBar.setVisibility(View.GONE);
           });
         } catch (Exception e) {
-          mainHandler.post(() -> {});
+          mainHandler.post(() -> {
+            if (progressBar != null) progressBar.setVisibility(View.GONE);
+          });
         }
       }
     });
@@ -99,6 +193,6 @@ public class Downloader {
     mimeMap.put("image/jpeg", ".jpg");
     mimeMap.put("image/png", ".png");
     mimeMap.put("application/json", ".json");
-    return mimeMap.getOrDefault(mimeType, "");
+    return mimeMap.getOrDefault(mimeType, ".tmp");
   }
 }
