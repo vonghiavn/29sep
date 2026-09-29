@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="#1E293B"
+  tools:context=".ViewUserActivity">
+
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <ImageView
+      android:id="@+id/iv_detail"
+      android:layout_width="match_parent"
+      android:layout_height="350dp"
+      android:layout_gravity="center"
+      android:scaleType="centerCrop"
+      tools:srcCompat="@tools:sample/avatars" />
+
+    <TextView
+      android:id="@+id/tv_detail_title"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_gravity="center"
+      android:fontFamily="cursive"
+      android:paddingTop="15dp"
+      android:text="Username"
+      android:textAlignment="center"
+      android:textColor="#00E5FF"
+      android:textSize="26sp"
+      android:textStyle="bold" />
+
+    <TextView
+      android:id="@+id/tv_detail_email"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_gravity="center"
+      android:paddingBottom="10dp"
+      android:text="email@example.com"
+      android:textAlignment="center"
+      android:textColor="#A0AEC0"
+      android:textSize="15sp"
+      android:textStyle="italic" />
+
+    <TextView
+      android:id="@+id/tv_detail_description"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:fontFamily="casual"
+      android:paddingTop="10dp"
+      android:paddingBottom="10dp"
+      android:text="Description"
+      android:textColor="#FF9100"
+      android:textSize="16sp" />
+
+    <TextView
+      android:id="@+id/tv_detail_hobby"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:fontFamily="casual"
+      android:paddingTop="10dp"
+      android:paddingBottom="30dp"
+      android:text="Sở thích: Hobbies..."
+      android:textColor="#4ADE80"
+      android:textSize="16sp" />
+  </LinearLayout>
+</ScrollView>
